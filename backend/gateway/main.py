@@ -8,7 +8,9 @@ import shutil  # For saving uploaded video temporarily
 
 from gateway.utils import publish_video_job
 
+print("Starting Gateway...")
 app = FastAPI(title="Fake News Detector - API Gateway")
+print("FastAPI app initialized")
 
 # Allow CORS
 app.add_middleware(

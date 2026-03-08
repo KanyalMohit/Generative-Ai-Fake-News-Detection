@@ -8,15 +8,15 @@ function App() {
         <h1 className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500 mb-4 tracking-tight">
           Truth Lens
         </h1>
-        <p className="text-xl text-slate-500 font-light max-w-2xl mx-auto">
-          Advanced AI-powered verification for Text, Images, and Deepfake Video detection.
+        <p className="text-xl text-slate-500 font-light max-w-3xl mx-auto leading-relaxed">
+          GenAI-powered fake news detection and verification for text, images, and deepfake video analysis.
         </p>
       </div>
 
       <Detector />
 
       <div className="max-w-2xl mx-auto mt-16 text-center text-slate-400 text-sm">
-        <p>© {new Date().getFullYear()} Truth Lens. Powered by Gemini Pro Vision & Perplexity Sonar.</p>
+        <p>© {new Date().getFullYear()} Truth Lens. Powered by Gemini, with optional Perplexity enrichment.</p>
       </div>
     </div>
   );
