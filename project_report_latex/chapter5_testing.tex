@@ -1,0 +1,59 @@
+\chapter{Testing Strategies}
+
+Validating and ensuring the reliability of a Generative AI-powered application presents novel, complex challenges compared to traditional deterministic software engineering. Our comprehensive testing methodology encompassed standard software verification techniques layered with specific approaches tailored to evaluating the stochastic outputs of Large Language Models.
+
+\section{Unit Testing and Vector Database Mocks}
+Traditional unit testing formed the baseline of the system's reliability. Employing the \texttt{pytest} framework, we ensured that core Python logic—such as URL parsing heuristics and localized image processing—operated consistently.
+
+Crucially, because querying the local Vector Database and executing the embedded LLM inference incurs significant local memory and compute overhead, strategic \textit{mocking} was implemented. Using Python's \texttt{unittest.mock} library, we intercepted the semantic search functions in the test suite and replaced them with static, simulated embedding arrays. This allowed developers to rigorously test the Content Service's schema transformations and algorithmic routing hundreds of times per minute without executing actual heavy tensor operations.
+
+\begin{lstlisting}[language=Python, caption=Mocking the Vector DB Retrieval for Unit Tests]
+from unittest.mock import patch
+from app.services.rag_service import analyze_claim_with_rag
+
+@patch('app.services.rag_service.collection.query')
+@patch('app.services.rag_service.EmbeddedGeminiModel.generate')
+def test_analyze_claim_valid_schema(mock_generate, mock_query):
+    # Mocking the Vector DB semantic search results
+    mock_query.return_value = {
+        'documents': [["The moon is a rocky satellite.", "Cheese is a dairy product."]]
+    }
+    
+    # Mocking the embedded LLM response to return a perfect generic JSON string
+    mock_generate.return_value = '{"verdict": "False", "confidence_score": 95, "reasoning": "Test reasoning"}'
+
+    result = analyze_claim_with_rag("The moon is made of cheese")
+    
+    assert result["verdict"] == "False"
+    assert result["confidence_score"] == 95
+    # Asserts that the downstream logic correctly parses the string into a dict
+    assert isinstance(result, dict) 
+\end{lstlisting}
+
+\section{Integration and Microservices Testing}
+Integration tests focused extensively on the communication boundaries between the separated microservices. The most critical integration vector was the asynchronous video pipeline. We simulated high-bandwidth payload uploads to ensure the API Gateway correctly initialized the Redis state schema. 
+
+Subsequent integration tests forcefully crashed the Video Worker Service mid-execution to validate that RabbitMQ successfully kept the message in the queue (utilizing message acknowledgment flags) and avoided losing user data during a critical fault.
+
+\section{Functional API Endpoint Testing}
+Using Postman collections and the automatically generated FastAPI Swagger UI (\texttt{/docs}), rigorous functional testing was executed against the core endpoints simulating real client usage scenarios:
+\begin{enumerate}
+    \item \textbf{\texttt{POST /analyze/text}}: Tested with varying character encodings, extreme string lengths (testing token limits), and malformed nested URLs to ensure the BeautifulSoup extraction middleware did not trigger a 500 Internal Server Error.
+    \item \textbf{\texttt{POST /analyze/image}}: Benchmarked with varying resolutions, obscure MIME types, and highly compressed JPEGs to ensure the OCR pipeline properly extracted sufficient context before transmitting the payload to the GenAI model.
+    \item \textbf{\texttt{POST /analyze/video}}: Required comprehensive end-to-end testing, mimicking heavy asynchronous payloads to explicitly verify long-polling state updates via the Redis broker (Transitions from Queued $\rightarrow$ Processing $\rightarrow$ Completed).
+\end{enumerate}
+
+\section{Evaluating Generative AI Output (LLM Validation)}
+Because LLMs exhibit non-deterministic, probabilistic behavior, traditional assertion-based testing is insufficient for the core business logic. Therefore, testing the "intelligence" of the system required structural and semantic validation methodologies.
+
+We implemented strict defensive programming techniques demanding the Gemini model adhering to highly specific JSON schemas (as detailed in Chapter 3). 
+
+\textbf{Semantic Evaluation Suite:}
+A manual evaluation dataset was curated containing 50 pieces of known, verified misinformation (e.g., historical deepfakes, retracted news articles) and 50 pieces of highly factual articles. These were routed through the full system pipeline to statistically measure:
+\begin{itemize}
+    \item \textbf{Schema Adherence:} Did the model return a parseable JSON dictionary 100\% of the time? (Achieved via lower generation temperatures and prompt reinforcement).
+    \item \textbf{Classification Accuracy:} Did the "verdict" field correctly map to the predefined enums (True, False, Misleading) based on human consensus?
+    \item \textbf{Hallucination Rate:} Was the generated reasoning coherent? Most importantly, did it explicitly cite the locally extracted text or image data without synthesizing entirely fabricated external facts?
+\end{itemize}
+
+This dual approach of standard unit mocking combined with statistical semantic evaluation ensured that Project Satya remained both programmatically resilient and analytically trustworthy.

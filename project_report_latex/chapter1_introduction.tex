@@ -1,0 +1,39 @@
+\chapter{Introduction}
+
+\section{Prologue}
+The rapid advancement of generative artificial intelligence has fundamentally altered the landscape of digital information. While these tools have brought profound benefits—ranging from automated code generation to creative content creation—they have simultaneously democratized the production of highly convincing disinformation. Deepfakes, AI-generated news articles, and semantically manipulated images are continuously deployed with the intent to sew discord, manipulate financial markets, and deceive the public. Information integrity is no longer guaranteed by the apparent authenticity of a medium; seeing is no longer believing. 
+
+\textbf{Project Satya} serves as a critical, multi-layered defense mechanism against this escalating threat. Named after the Sanskrit word for "truth," Satya provides a comprehensive, multimodal verification assistant. It is meticulously designed to evaluate text, images, and video content for authenticity, shifting the paradigm from passive content consumption to active, AI-assisted verification.
+
+\section{Background and Motivation}
+Traditionally, fake news detection systems functioned as simple, monolithic binary classifiers. These early-generation systems relied heavily on traditional Natural Language Processing (NLP) techniques to analyze linguistic patterns and output a rudimentary "true" or "false" probability score. While statistically useful in controlled academic datasets, these systems fall severely short in real-world applications. They operate as "black boxes," lacking the explanatory power required to foster genuine user trust.
+
+Users—ranging from investigative journalists to everyday digital citizens navigating social media—need to understand the \textit{why} behind a verdict. A simple 85\% probability score that an article is fake does not help a user understand the nuanced deception within the text. The core motivation for Project Satya is to transition the industry standard from black-box classification to transparent, generative verification. By leveraging modern Large Language Models (LLMs), we can surface conflicting evidence, explain logical fallacies, and provide human-readable reasoning to substantiate the system's claims.
+
+\section{Problem Statement}
+Current anti-disinformation tools suffer from two primary architectural flaws: they are largely siloed by modality, and they fail to synthesize contextual evidence. Existing tools operate either exclusively on text (e.g., standard fact-checkers), images (e.g., reverse image search), or video (e.g., deepfake spatial analyzers). However, modern disinformation campaigns are intrinsically multimodal, often pairing a genuine image with a fabricated headline to bypass basic detection algorithms.
+
+Furthermore, current systems fail to provide contextual explanations grounded in retrieved evidence. There is a pressing, unfulfilled need for a unified, scalable platform capable of detecting manipulation cues across all input types concurrently, while simultaneously synthesizing external research to present a readable, highly nuanced verification report.
+
+\section{Objectives and Research Methodology}
+The primary objective of Project Satya is to architect and deploy a production-ready, AI-assisted verification tool encompassing the following functional domains:
+\begin{enumerate}
+    \item \textbf{Text verification:} Accepting raw paragraphs or live URLs, extracting semantic claims, and executing Retrieval-Augmented Generation (RAG) against a curated Vector Database of highly credible sources to formulate structured verdicts.
+    \item \textbf{Image verification:} Integrating Optical Character Recognition (OCR) and vision-language models to extract visible text and holistic context, subsequently routing this data through the core verification pipeline.
+    \item \textbf{Deepfake video inspection:} Establishing an asynchronous, message-brokered pipeline capable of processing heavy video payloads to identify temporal, visual, and audio anomalies indicative of AI generation.
+\end{enumerate}
+
+Our research methodology revolves around the implementation of a novel Generative AI pipeline powered by locally integrated LLM architectures (leveraging quantized Gemini and Perplexity-based models). Instead of relying on volatile internet searches, the system utilizes a \textbf{Vector Database} primed with embeddings from highly credible, high-scoring news and research sites. The underlying process involves \textit{Input understanding}, \textit{Evidence retrieval (via semantic vector search)}, \textit{Generative verification}, and \textit{User-facing explanation}. This ensures the system evaluates discrete claims and generates a cohesive, structured JSON report grounded purely in pre-verified, credible data.
+
+\section{Project Organization}
+This technical report is organized to meticulously document the end-to-end development of Project Satya over the course of the software development lifecycle. 
+
+\begin{itemize}
+    \item \textbf{Chapter 2} outlines the phases of the software development cycle, detailing the system's hardware specifications, software dependencies, and the agile methodologies employed.
+    \item \textbf{Chapter 3} delves deeply into the coding of functions, focusing on the microservices architecture, asynchronous task brokering, and the specific prompt engineering techniques utilized for the GenAI integration.
+    \item \textbf{Chapter 4} provides a comprehensive visual walkthrough of the system, featuring snapshots of the frontend UI, generated verification reports, and operational backend logs.
+    \item \textbf{Chapter 5} discusses the rigorous testing strategies implemented, addressing the unique challenges of verifying non-deterministic LLM outputs alongside traditional integration tests.
+    \item \textbf{Chapter 6} transparently reviews the current limitations of the system, including API rate limits and hallucination risks.
+    \item \textbf{Chapter 7} maps out a strategic roadmap for future enhancements, including Retrieval-Augmented Generation (RAG) and browser extension routing.
+    \item \textbf{Chapter 8} concludes the project report with a summary of achievements and the broader impact of the developed system.
+\end{itemize}

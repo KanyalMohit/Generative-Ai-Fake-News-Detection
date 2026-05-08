@@ -1,0 +1,98 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\titleformat{\section}{\large\bfseries\color{blue}}{}{0em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{}{0em}{}
+
+\title{\textbf{Project Comprehensive Technical Guide: Satya \\ Generative AI Fake News \& Deepfake Detection}}
+\author{Project Documentation Team}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Project Abstract}
+The "Satya" project is an advanced, multi-modal verification platform designed to combat the rising tide of AI-generated misinformation and deepfakes. By integrating state-of-the-art Large Language Models (LLMs), Computer Vision, and a robust microservices architecture, the system provides users with real-time, evidence-based analysis of text, images, and videos. This document serves as a comprehensive technical manual for the project, detailing the architectural decisions, implementation strategies, and the underlying logic that powers the detection engine.
+
+\section{The Problem Domain: Misinformation in the Age of GenAI}
+In the modern digital landscape, the cost of generating high-quality fake content has dropped significantly due to the advent of Generative AI. 
+\begin{itemize}
+    \item \textbf{Textual Hallucinations:} AI models can generate convincing but entirely false news articles.
+    \item \textbf{Deepfake Media:} Sophisticated video and audio manipulation can replicate public figures with high fidelity.
+    \item \textbf{Information Overload:} Fact-checkers cannot keep up with the volume of content generated daily.
+\end{itemize}
+Our project addresses these issues by providing an automated, scalable tool that does not just "label" content but "explains" the reasoning behind its verdict.
+
+\section{System Architecture: The Microservices Paradigm}
+The project adopts a \textbf{decoupled microservices architecture}. This was a critical design choice to ensure that computationally expensive tasks (like video analysis) do not degrade the performance of lightweight tasks (like text analysis).
+
+\subsection{1. API Gateway (The Orchestrator)}
+The Gateway, built with \textbf{FastAPI}, serves as the brain's "pre-frontal cortex." It handles all incoming traffic, validates requests, and routes them to the appropriate worker services.
+\begin{itemize}
+    \item \textbf{Responsibility:} Security, CORS, rate limiting, and request routing.
+    \item \textbf{Why FastAPI?} We chose FastAPI over traditional frameworks like Flask or Django because of its native support for \textbf{asynchronous programming} (ASGI), which is vital for handling concurrent file uploads and long-running I/O operations.
+\end{itemize}
+
+\subsection{2. Content Service (The Analytical Engine)}
+This service handles text and image inputs. It contains the logic for:
+\begin{itemize}
+    \item \textbf{Web Scraping:} Extracting content from URLs provided by users.
+    \item \textbf{OCR Pipeline:} Converting image text into machine-readable format.
+    \item \textbf{GenAI Integration:} Orchestrating calls to high-reasoning LLMs.
+\end{itemize}
+
+\subsection{3. Video Service (The Background Specialist)}
+Video analysis is done in an \textbf{asynchronous background environment}. 
+\begin{itemize}
+    \item \textbf{Mechanism:} When a video is uploaded, the Gateway stores it and pushes a job notification to a \textbf{RabbitMQ} queue.
+    \item \textbf{State Storage:} The current status of the job (PENDING, PROCESSING, COMPLETED) is tracked in \textbf{Redis}.
+    \item \textbf{Worker Logic:} A separate worker process consumes the queue, performs frame-by-frame analysis, and writes the final JSON report back to Redis.
+\end{itemize}
+
+\section{Technical Implementation Deep Dive}
+
+\subsection{Text Verification Logic}
+The verification isn't just a simple search. It follows a multi-step cognitive pipeline:
+1. \textbf{De-contextualization:} Breaking down complex paragraphs into atomic factual claims.
+2. \textbf{Query Generation:} Formulating optimized search queries to find evidence for or against each claim.
+3. \textbf{Evidence Synthesis:} Comparing the claim against retrieved search results from diverse, credible sources.
+4. \textbf{Conflict Resolution:} If sources disagree, the model evaluates the reputation of the sources and the recency of the information.
+
+\subsection{Image \& OCR Processing}
+Images are processed using \textbf{Tesseract OCR}. Since raw OCR output is often "noisy" (missing spaces, misread characters), we feed the OCR output into a secondary "Cleaning Model" (an LLM) that reconstructs the intended message before analysis.
+
+\subsection{Video Deepfake Detection}
+Our video service looks for \textbf{temporal and spatial anomalies}. This includes:
+\begin{itemize}
+    \item \textbf{Lip-Sync Discrepancies:} Checking if the audio waveform aligns with the mouth movements.
+    \item \textbf{Edge Artifacts:} Detecting subtle blurring or flickering around the face area, which is common in GAN-generated content.
+    \item \textbf{Metadata Analysis:} Checking for inconsistencies in file headers and compression patterns.
+\end{itemize}
+
+\section{Infrastructure \& DevOps}
+\begin{itemize}
+    \item \textbf{Docker:} Every service is containerized, ensuring that the development environment matches the production environment perfectly.
+    \item \textbf{RabbitMQ:} Acts as the message broker, ensuring that even if the worker service crashes, the jobs are not lost (Persistence).
+    \item \textbf{Redis:} Provides sub-millisecond latency for job tracking, which is essential for a smooth frontend polling experience.
+\end{itemize}
+
+\section{The Future of Satya}
+Our roadmap includes:
+1. \textbf{Blockchain Logging:} Storing verification reports on a ledger to prevent tampering with historical truth.
+2. \textbf{Browser Extension:} Real-time analysis as users browse social media feeds.
+3. \textbf{Audio-only Analysis:} Extending detection to AI-generated voice clones and "Vishing" attacks.
+
+\section{Conclusion}
+The Satya project demonstrates that fighting AI with AI is the only viable path forward. By combining a modern web stack with robust infrastructure and cutting-edge machine learning models, we have built a tool that empowers users to distinguish truth from fiction in the digital age.
+
+\end{document}

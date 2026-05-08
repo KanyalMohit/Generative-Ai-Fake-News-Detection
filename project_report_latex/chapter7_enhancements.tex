@@ -1,0 +1,20 @@
+\chapter{Enhancements}
+
+Project Satya establishes a strong architectural foundation for multimodal fake news detection. However, to evolve the system into an enterprise-grade threat detection suite, several major enhancements are proposed for future development phases.
+
+\section{Advanced Claim Decomposition}
+Currently, the system analyzes paragraphs and short articles as singular entities. An enhancement would involve implementing a preliminary NLP pipeline to decompose long-form articles into an array of distinct, individual claims. Each claim could then be processed in parallel by the microservices backend, resulting in a granular, claim-by-claim verification report rather than a generalized summary.
+
+\section{Browser Extension Integration}
+To maximize user impact, the core functionality of the API Gateway could be refactored to support a Chrome/Firefox Web Extension. This extension would highlight potentially deceptive text directly on social media feeds and news websites. Users could right-click images or highlight paragraphs to trigger the Content Service's GenAI verification on the fly, dramatically reducing the friction of fact-checking.
+
+\section{Real-Time News and Custom Knowledge Graph Integration}
+Presently, the project utilizes Gemini’s internal model weights and the temporarily retained Perplexity endpoint for dynamic search. A significant enhancement involves engineering a Retrieval-Augmented Generation (RAG) pipeline querying trusted, real-time news sources (like Reuters, AP News, or Snopes databases) via custom webhooks. Constructing a dynamic Knowledge Graph would force the LLM to strictly cite real-time verified facts, drastically reducing hallucination risks and increasing the confidence scores of the generated reports.
+
+\section{Adaptive Explainability Modes}
+Users vary drastically in their required level of technical detail. Future enhancements should include a dynamic UI toggle interfacing with the Content Service, allowing the system to output its generative reasoning in different \textit{modes} such as:
+\begin{enumerate}
+    \item \textbf{Academic:} Citing specific methodology and data points.
+    \item \textbf{Journalistic:} Focusing directly on sources, evidence ranking, and contradictory statements.
+    \item \textbf{Simplified:} An "Explain-Like-I'm-5" breakdown tailored for immediate, broad public comprehension.
+\end{enumerate}

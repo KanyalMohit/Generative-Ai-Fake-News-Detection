@@ -1,0 +1,155 @@
+\documentclass[12pt, a4paper]{report}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc} % Encoding
+\usepackage{graphicx}       % For adding pictures
+\usepackage{geometry}       % For margins
+\usepackage{hyperref}       % For clickable links and ToC
+\usepackage{listings}       % For code snippets
+\usepackage{xcolor}         % For code snippet coloring
+\usepackage{titlesec}       % For customizing chapter titles
+\usepackage{caption}        % For better image captions
+\usepackage{float}          % For forcing image placement
+
+% --- Margin Configuration ---
+\geometry{
+    top=1in,
+    bottom=1in,
+    left=1.5in, % Standard for binding
+    right=1in
+}
+
+% --- Hyperlink Configuration ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=magenta,      
+    urlcolor=blue,
+    pdftitle={Project Satya Report},
+    pdfpagemode=FullScreen,
+}
+
+% --- Code Snippet Configuration ---
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% --- Customizing Chapter Titles to be College Format ---
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries\centering}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+% ==========================================
+%                  DOCUMENT
+% ==========================================
+\begin{document}
+
+% --- Title Page ---
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1in}
+        
+        \Huge
+        \textbf{Satya: Generative AI Fake News and Deepfake Detector}
+        
+        \vspace{0.5in}
+        \LARGE
+        A Project Report
+        
+        \vspace{0.5in}
+        \textit{Submitted in partial fulfillment of the requirements for the degree of}
+        
+        \vspace{0.2in}
+        \Large
+        \textbf{[Your Degree Name e.g., Bachelor of Technology]}
+        
+        \vspace{0.1in}
+        \normalsize
+        in [Your Major e.g., Computer Science and Engineering]
+        
+        \vspace{0.8in}
+        
+        \Large
+        \textbf{Submitted by:} \\
+        Mohit Kanyal \\
+        {[Your Roll Number / ID]}
+        
+        \vspace{0.8in}
+        
+        \Large
+        \textbf{Under the guidance of:} \\
+        {[Your Professor's Name]} \\
+        {[Professor's Title]}
+        
+        \vfill
+        
+        % Optionally add university logo here
+        % \includegraphics[width=0.3\textwidth]{logo.png} 
+        
+        \Large
+        \textbf{[Your University/College Name]} \\
+        \textbf{[City, State, ZIP]} \\
+        \textbf{[Year, e.g., 2026-2027]}
+        
+    \end{center}
+\end{titlepage}
+
+% --- Abstract ---
+\pagenumbering{roman} % Roman numerals for front matter
+\addcontentsline{toc}{chapter}{Abstract}
+\input{abstract}
+\newpage
+
+% --- Table of Contents ---
+\tableofcontents
+\newpage
+
+% --- List of Abbreviations ---
+\addcontentsline{toc}{chapter}{List of Abbreviations}
+\input{abbreviations}
+\newpage
+
+% --- List of Figures ---
+\addcontentsline{toc}{chapter}{List of Figures}
+\listoffigures
+\newpage
+
+% --- Main Body ---
+\pagenumbering{arabic} % Switch to normal numbers
+\setcounter{page}{1}
+
+\input{chapter1_introduction}
+\input{chapter2_sdlc}
+\input{chapter3_coding}
+\input{chapter4_snapshots}
+\input{chapter5_testing}
+\input{chapter6_limitations}
+\input{chapter7_enhancements}
+\input{chapter8_conclusion}
+
+% --- References ---
+\addcontentsline{toc}{chapter}{References}
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

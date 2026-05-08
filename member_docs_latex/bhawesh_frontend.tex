@@ -1,0 +1,86 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\titleformat{\section}{\large\bfseries\color{blue}}{}{0em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{}{0em}{}
+
+\title{\textbf{Comprehensive Contribution Report: Bhawesh \\ Frontend Lead \& State Management Engineer}}
+\author{Satya Project Team}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction \& Role Overview}
+Bhawesh served as the \textbf{Frontend Lead} for the "Satya" project. His role was critical in bridging the gap between high-level AI backend services and the end-user. Bhawesh was responsible for the architecture of the \textbf{React (Vite)} application, specifically focusing on complex state management, asynchronous data fetching, and the implementation of real-time feedback loops. His work ensured that the user experience remained smooth, even when the system was performing heavy background computations.
+
+\section{Core Contribution: The Asynchronous Polling System}
+The most technically challenging part of the frontend was handling \textbf{Video Analysis}. Unlike text, which returns results almost instantly, video analysis can take minutes. 
+
+\subsection{Implementing the Polling Logic}
+Bhawesh designed and implemented a robust \textbf{Polling Mechanism} within React:
+\begin{itemize}
+    \item \textbf{Job Tracking:} When a video is uploaded, Bhawesh's code captures the \texttt{job\_id} from the Gateway.
+    \item \textbf{Interval Management:} He used the \texttt{useEffect} hook combined with \texttt{setInterval} to query the status endpoint (\texttt{/analyze/video/\{job\_id\}}) every 3 seconds.
+    \item \textbf{Cleanup & Memory Management:} He ensured that the interval is cleared as soon as the job is COMPLETED or FAILED, or if the user navigates away from the page, preventing memory leaks and unnecessary network traffic.
+\end{itemize}
+
+\subsection{Why Polling instead of WebSockets?}
+Bhawesh made a strategic decision to use \textbf{HTTP Polling} over WebSockets. 
+\begin{itemize}
+    \item \textbf{Simplicity:} Polling is easier to scale and doesn't require keeping a constant TCP connection open on the server, which is better for the Gateway's resource management.
+    \item \textbf{Reliability:} Polling is more resilient to momentary network drops, as each request is independent.
+\end{itemize}
+
+\section{Component Architecture & Multi-Modal State}
+Bhawesh built a \textbf{Modular Component System} that allows the app to switch between Text, Image, and Video modes without reloading the page.
+
+\subsection{Dynamic Form Handling}
+He implemented a centralized state machine to manage:
+\begin{itemize}
+    \item \textbf{Input Modes:} Seamlessly switching between a \texttt{textarea} for claims and a \texttt{file input} for media.
+    \item \textbf{Loading States:} Providing visual feedback (spinners and status text) during the "Generating verification report..." phase.
+    \item \textbf{Error Boundaries:} Implementing logic to catch and display backend error messages (e.g., "URL not reachable" or "Invalid file format") without crashing the entire UI.
+\end{itemize}
+
+\section{Integration & Full-Stack Bridging}
+Bhawesh worked closely with Mohit and Aastha to define the \textbf{API Contracts}. 
+\begin{itemize}
+    \item \textbf{Multipart Data Handling:} He wrote the logic for sending binary files (images/videos) alongside metadata using the \texttt{FormData} API.
+    \item \textbf{JSON Parsing:} Since the backend returns complex, nested JSON (including lists of claims, evidence, and citations), Bhawesh developed specialized "parser functions" to map this data into the UI components efficiently.
+\end{itemize}
+
+\section{Design Philosophy: The "Loading" Experience}
+Bhawesh's philosophy was that \textbf{"An app that is thinking should look like it's thinking."} 
+\begin{itemize}
+    \item He implemented progress indicators that change based on the backend's status.
+    \item He ensured that the UI is "Optimistic"—meaning it immediately acknowledges the user's action while the backend works in the background.
+\end{itemize}
+
+\section{Advanced Interview Preparation: Q&A}
+
+\subsection{Q1: How did you prevent 'Race Conditions' in your polling logic?}
+\textbf{Answer:} "Race conditions can occur if a previous status request takes longer than the polling interval. I solved this by using a flag (like \texttt{isPolling}) to ensure that we don't fire a new request until the previous one has either resolved or timed out. I also used an \texttt{AbortController} to cancel pending requests if the component unmounts."
+
+\subsection{Q2: Why did you choose Vite over Create React App (CRA)?}
+\textbf{Answer:} "Vite uses \textbf{Esbuild} for pre-bundling and provides nearly instantaneous Hot Module Replacement (HMR). During development, this saved us hours of waiting for the build to refresh. For production, it produces highly optimized chunks that load faster for the end-user."
+
+\subsection{Q3: How do you handle large file uploads to prevent the browser from freezing?}
+\textbf{Answer:} "We handle uploads asynchronously using \texttt{fetch}. By using the \texttt{FormData} API, the browser handles the streaming of the file in the background. I also implemented client-side validation to check the file size and type *before* sending it to the server, which saves bandwidth and provides immediate feedback to the user."
+
+\section{Technical Terms to Master}
+\begin{itemize}
+    \item \textbf{State Lifting:} Moving state to a parent component to share data between children.
+    \item \textbf{Conditional Rendering:} Showing different UI elements based on the analysis mode.
+    \item \textbf{Hook Lifecycle:} Understanding when \texttt{useEffect} runs and cleans up.
+    \item \textbf{CORS (Cross-Origin Resource Sharing):} The security protocol for browser-server communication.
+\end{itemize}
+
+\end{document}

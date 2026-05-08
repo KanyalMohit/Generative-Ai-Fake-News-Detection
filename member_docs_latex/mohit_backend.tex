@@ -1,0 +1,83 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\titleformat{\section}{\large\bfseries\color{indigo}}{}{0em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{}{0em}{}
+
+\title{\textbf{Comprehensive Contribution Report: Mohit \\ Lead Backend Architect \& Infrastructure Engineer}}
+\author{Satya Project Team}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction \& Role Overview}
+Mohit served as the \textbf{Lead Backend Architect} for the "Satya" project. His primary responsibility was the design and implementation of the system's structural integrity, ensuring that the application could handle complex, multi-modal analysis requests concurrently and reliably. Beyond just writing code, Mohit's role involved making high-level architectural decisions that defined the project's technology stack and infrastructure.
+
+\section{Core Contribution: The Microservices Strategy}
+One of the most significant decisions Mohit made was to move away from a traditional monolithic architecture in favor of a \textbf{Microservices approach}. 
+
+\subsection{Why Microservices?}
+Mohit realized early on that analyzing text is a "fast" operation, while analyzing video is a "slow" operation. In a monolith, a single long-running video upload could potentially block the entire server, causing text analysis requests to time out. By splitting the backend into an \textbf{API Gateway}, a \textbf{Content Service}, and a \textbf{Video Service}, Mohit ensured:
+\begin{itemize}
+    \item \textbf{Independent Scalability:} The video service can be scaled up on hardware with more GPUs/CPUs without affecting the lightweight Gateway.
+    \item \textbf{Fault Isolation:} If the video worker crashes due to a corrupted file, the text and image analysis modules remain fully operational.
+\end{itemize}
+
+\section{The API Gateway: Centralized Orchestration}
+Mohit built the API Gateway using \textbf{FastAPI}. This service acts as the entry point for the entire system.
+
+\subsection{Key Implementations in the Gateway}
+\begin{itemize}
+    \item \textbf{Asynchronous Request Handling:} Using Python’s \texttt{async/await} syntax, Mohit ensured the Gateway can handle thousands of concurrent connections without thread-locking.
+    \item \textbf{Payload Validation:} Implemented \textbf{Pydantic models} to strictly validate incoming JSON data and file types, preventing malicious or malformed data from reaching the internal services.
+    \item \textbf{CORS and Security:} Configured middleware to handle Cross-Origin Resource Sharing, allowing the React frontend to communicate securely with the backend while preventing unauthorized cross-site requests.
+\end{itemize}
+
+\section{Infrastructure & Asynchronous Processing}
+Mohit was responsible for setting up the "plumbing" of the project—the communication layers between services.
+
+\subsection{The RabbitMQ & Redis Pipeline}
+For video analysis, Mohit implemented a robust \textbf{Asynchronous Job Queue}:
+1. \textbf{Producer (Gateway):} When a video is received, the Gateway generates a UUID for the job and stores it in \textbf{Redis} with a status of \texttt{PENDING}.
+2. \textbf{Message Broker (RabbitMQ):} The job is pushed into a RabbitMQ queue. Mohit configured RabbitMQ for \textbf{message persistence}, meaning jobs aren't lost even if the system restarts.
+3. \textbf{Consumer (Worker):} A background worker pulls the job, performs the heavy lifting, and updates the status in Redis.
+4. \textbf{Why this design?} This decoupled approach allows the user to navigate the app while the video is being processed in the background, providing a superior User Experience (UX).
+
+\subsection{Containerization with Docker}
+Mohit managed the entire environment using \textbf{Docker and Docker Compose}. He created multi-stage build files that minimize image size and ensure that every team member is working in an identical development environment, eliminating the "it works on my machine" problem.
+
+\section{Design Philosophy & Trade-offs}
+During the development, Mohit faced several critical trade-offs:
+\begin{itemize}
+    \item \textbf{FastAPI vs. Flask:} While Flask is simpler, Mohit chose FastAPI for its built-in Swagger documentation and superior speed.
+    \item \textbf{Redis vs. Database for Jobs:} Mohit chose Redis over a traditional SQL database for job tracking because of its \textbf{in-memory speed}. Since job statuses are temporary and frequently polled, the sub-millisecond response time of Redis was a perfect fit.
+\end{itemize}
+
+\section{Advanced Interview Preparation: Q&A}
+
+\subsection{Q1: How did you handle horizontal scaling in your backend?}
+\textbf{Answer:} "By using a Microservices architecture and a message broker (RabbitMQ), we can scale horizontally very easily. For example, if we see a spike in video uploads, we can spin up five additional 'Video Worker' containers. They all connect to the same RabbitMQ queue and share the load. The API Gateway doesn't even need to know they exist, which is the beauty of this decoupled design."
+
+\subsection{Q2: What was the biggest technical challenge you faced?}
+\textbf{Answer:} "The biggest challenge was managing the state of asynchronous jobs across multiple services. I solved this by using Redis as a centralized 'Source of Truth' for job statuses. Implementing the polling mechanism required careful synchronization to ensure that the frontend never receives outdated or conflicting information about a job's progress."
+
+\subsection{Q3: Why did you choose RabbitMQ over something simpler like a Python thread?}
+\textbf{Answer:} "Threads are limited by the Python Global Interpreter Lock (GIL) and are bound to a single process. If the process dies, the task dies. RabbitMQ provides a distributed queue that lives outside the application process. It offers persistence, acknowledgments, and the ability to distribute tasks across multiple physical servers, which is essential for any production-grade system."
+
+\section{Technical Terms to Master}
+\begin{itemize}
+    \item \textbf{ASGI (Asynchronous Server Gateway Interface):} The foundation of FastAPI's speed.
+    \item \textbf{Idempotency:} Ensuring that submitting the same request twice doesn't cause errors.
+    \item \textbf{Message Persistence:} Ensuring messages in a queue survive a system crash.
+    \item \textbf{Reverse Proxying:} How the Gateway routes traffic to internal services.
+\end{itemize}
+
+\end{document}

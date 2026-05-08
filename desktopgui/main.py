@@ -1,12 +1,8 @@
 import html
-import json
-import os
 import sys
 from pathlib import Path
 
-import requests
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtSvgWidgets import QSvgWidget
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -21,159 +17,17 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QScrollArea,
-    QSizePolicy,
     QStackedWidget,
-    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
 
+from api_worker import ApiWorker
+from ui_components import ModeCard, MetricChip, ResultSection
+from styles import get_stylesheet
+
 BASE_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = BASE_DIR / "assets"
-API_BASE = os.environ.get("TRUTH_LENS_API", "http://127.0.0.1:8000")
-
-
-class ApiWorker(QThread):
-    finished = Signal(dict)
-    failed = Signal(str)
-
-    def __init__(self, mode: str, payload: dict | None = None, file_path: str | None = None):
-        super().__init__()
-        self.mode = mode
-        self.payload = payload or {}
-        self.file_path = file_path
-
-    def run(self):
-        try:
-            if self.mode in {"text", "url"}:
-                data = {
-                    "content": self.payload.get("content", ""),
-                    "is_url": self.mode == "url",
-                }
-                response = requests.post(f"{API_BASE}/analyze/text", json=data, timeout=180)
-                if not response.ok:
-                    raise RuntimeError(self._format_error(response, "text/url analysis"))
-                self.finished.emit(response.json())
-                return
-
-            if self.mode in {"image", "video"}:
-                endpoint = "/analyze/image" if self.mode == "image" else "/analyze/video"
-                with open(self.file_path, "rb") as handle:
-                    files = {"file": (os.path.basename(self.file_path), handle)}
-                    response = requests.post(f"{API_BASE}{endpoint}", files=files, timeout=600)
-                if not response.ok:
-                    raise RuntimeError(self._format_error(response, f"{self.mode} analysis"))
-                payload = response.json()
-
-                if self.mode == "video":
-                    job_id = payload.get("job_id")
-                    if not job_id:
-                        raise RuntimeError("Video job did not return a job_id.")
-                    for _ in range(120):
-                        poll = requests.get(f"{API_BASE}/analyze/video/{job_id}", timeout=60)
-                        if not poll.ok:
-                            raise RuntimeError(self._format_error(poll, "video status polling"))
-                        job = poll.json()
-                        status = job.get("status")
-                        if status == "COMPLETED":
-                            result = job.get("result")
-                            self.finished.emit(json.loads(result) if isinstance(result, str) else result)
-                            return
-                        if status == "FAILED":
-                            raise RuntimeError(job.get("error") or "Video analysis failed.")
-                        self.msleep(2500)
-                    raise TimeoutError("Video analysis timed out while waiting for the worker.")
-
-                self.finished.emit(payload)
-                return
-
-            raise RuntimeError(f"Unsupported mode: {self.mode}")
-        except requests.exceptions.ConnectionError:
-            self.failed.emit(
-                f"Could not connect to {API_BASE}. In this project, the desktop app should talk to the API Gateway on port 8000. Also make sure the Content Service (8001) is running, and for video mode ensure Redis, RabbitMQ, and the video worker are running too."
-            )
-        except Exception as exc:
-            self.failed.emit(str(exc))
-
-    def _format_error(self, response, stage: str):
-        try:
-            payload = response.json()
-            detail = payload.get("detail") if isinstance(payload, dict) else payload
-        except Exception:
-            detail = response.text or "Unknown backend error"
-        return f"{stage} failed ({response.status_code}): {detail}"
-
-
-class ModeCard(QPushButton):
-    def __init__(self, title: str, subtitle: str, icon_path: Path, mode_key: str):
-        super().__init__()
-        self.mode_key = mode_key
-        self.setCheckable(True)
-        self.setCursor(Qt.PointingHandCursor)
-        self.setMinimumHeight(172)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(10)
-
-        icon = QSvgWidget(str(icon_path))
-        icon.setFixedSize(68, 68)
-        layout.addWidget(icon, alignment=Qt.AlignLeft)
-
-        eyebrow = QLabel("MODE")
-        eyebrow.setObjectName("cardEyebrow")
-        title_label = QLabel(title)
-        title_label.setProperty("class", "cardTitle")
-        subtitle_label = QLabel(subtitle)
-        subtitle_label.setWordWrap(True)
-        subtitle_label.setProperty("class", "cardSubtitle")
-
-        layout.addWidget(eyebrow)
-        layout.addWidget(title_label)
-        layout.addWidget(subtitle_label)
-        layout.addStretch()
-
-
-class MetricChip(QFrame):
-    def __init__(self, title: str, value: str):
-        super().__init__()
-        self.setObjectName("metricChip")
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(4)
-        self.title = QLabel(title)
-        self.title.setObjectName("metricLabel")
-        self.value = QLabel(value)
-        self.value.setObjectName("metricValue")
-        layout.addWidget(self.title)
-        layout.addWidget(self.value)
-
-    def set_value(self, value: str):
-        self.value.setText(str(value))
-
-
-class ResultSection(QFrame):
-    def __init__(self, title: str):
-        super().__init__()
-        self.setObjectName("resultCard")
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(10)
-
-        heading = QLabel(title)
-        heading.setObjectName("sectionTitle")
-        layout.addWidget(heading)
-
-        self.body = QTextBrowser()
-        self.body.setOpenExternalLinks(True)
-        self.body.setFrameShape(QFrame.NoFrame)
-        self.body.setMinimumHeight(140)
-        self.body.setObjectName("sectionBody")
-        layout.addWidget(self.body)
-
-    def set_html(self, html_text: str):
-        self.body.setHtml(html_text)
 
 
 class MainWindow(QMainWindow):
@@ -184,7 +38,7 @@ class MainWindow(QMainWindow):
         self.selected_image = None
         self.selected_video = None
 
-        self.setWindowTitle("Truth Lens Desktop")
+        self.setWindowTitle("Satya:- fake news and deepfakes detectores")
         self.resize(1560, 960)
         self.setMinimumSize(1360, 880)
 
@@ -208,9 +62,9 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(18)
 
-        badge = QLabel("TRUTH LENS")
+        badge = QLabel("SATYA")
         badge.setObjectName("logoBadge")
-        title = QLabel("A desktop-grade\nGenAI misinformation lab")
+        title = QLabel("Satya:-\nFake news and deepfakes detectores")
         title.setWordWrap(True)
         title.setObjectName("heroTitle")
         subtitle = QLabel(
@@ -274,11 +128,10 @@ class MainWindow(QMainWindow):
 
         topbar = QHBoxLayout()
         topbar.setSpacing(14)
-        self.status_chip = QLabel(f"Backend target: {API_BASE}")
-        self.status_chip.setObjectName("statusChip")
+        
+        # We removed the URL connection status chip to clean up the UI
         self.mode_chip = QLabel("Mode: Text")
         self.mode_chip.setObjectName("statusChipAccent")
-        topbar.addWidget(self.status_chip)
         topbar.addWidget(self.mode_chip)
         topbar.addStretch()
 
@@ -474,7 +327,8 @@ class MainWindow(QMainWindow):
     def set_loading(self, loading: bool, message: str | None = None):
         self.progress.setVisible(loading)
         self.analyze_button.setDisabled(loading)
-        self.status_chip.setText(message or f"Backend target: {API_BASE}")
+        if message:
+            self.activity_label.setText(message)
 
     def run_analysis(self):
         try:
@@ -501,7 +355,7 @@ class MainWindow(QMainWindow):
             return
 
         self.activity_label.setText(f"Running {self.selected_mode} analysis and waiting for the backend response...")
-        self.set_loading(True, f"Talking to backend at {API_BASE}...")
+        self.set_loading(True, f"Talking to backend...")
         self.worker.finished.connect(self.handle_result)
         self.worker.failed.connect(self.handle_error)
         self.worker.start()
@@ -539,7 +393,7 @@ class MainWindow(QMainWindow):
         self.refresh_styles()
 
     def handle_result(self, data: dict):
-        self.set_loading(False, f"Connected to {API_BASE}")
+        self.set_loading(False, f"Connected to backend.")
         label = data.get("label") or ("DEEPFAKE DETECTED" if data.get("is_deepfake") else "LIKELY AUTHENTIC")
         confidence = data.get("confidence", data.get("confidence_score", "N/A"))
         summary = data.get("summary") or data.get("verdict_explanation") or data.get("short_explanation") or "Analysis complete."
@@ -602,205 +456,17 @@ class MainWindow(QMainWindow):
         self.claims.set_html(claims_html)
 
     def handle_error(self, error: str):
-        self.set_loading(False, f"Backend error on {API_BASE}")
+        self.set_loading(False, f"Backend error")
         self.activity_label.setText("The backend returned an error. Review the message and try again.")
         QMessageBox.critical(self, "Analysis failed", error)
 
     def apply_styles(self):
-        self.setStyleSheet("""
-            QWidget {
-                background: #0a1020;
-                color: #eef2ff;
-                font-family: 'Segoe UI', 'Inter', sans-serif;
-                font-size: 14px;
-            }
-            QMainWindow {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #070b16, stop:0.45 #10162c, stop:1 #07111e);
-            }
-            #sidebar, #mainPanel {
-                background: rgba(13, 20, 38, 0.94);
-                border: 1px solid rgba(255,255,255,0.08);
-                border-radius: 28px;
-            }
-            #logoBadge {
-                padding: 8px 14px;
-                border-radius: 16px;
-                background: rgba(109, 94, 247, 0.18);
-                border: 1px solid rgba(165, 155, 255, 0.28);
-                color: #d9d4ff;
-                font-weight: 800;
-                letter-spacing: 1px;
-            }
-            #heroTitle {
-                font-size: 30px;
-                font-weight: 800;
-                line-height: 1.2em;
-            }
-            #heroSubtitle, #sidebarFooter, .cardSubtitle, #inputSubtitle, #verdictSummary, #activityBody {
-                color: #9aa3b2;
-                line-height: 1.55em;
-            }
-            #cardEyebrow {
-                color: #84dbff;
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 1.8px;
-            }
-            ModeCard, QPushButton {
-                border: none;
-            }
-            ModeCard {
-                background: rgba(255,255,255,0.04);
-                border: 1px solid rgba(255,255,255,0.06);
-                border-radius: 24px;
-                text-align: left;
-            }
-            ModeCard:hover {
-                background: rgba(255,255,255,0.08);
-                border: 1px solid rgba(255,255,255,0.13);
-            }
-            ModeCard:checked {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(109,94,247,0.26), stop:1 rgba(29,213,192,0.18));
-                border: 1px solid rgba(165, 155, 255, 0.42);
-            }
-            QLabel[class="cardTitle"] {
-                font-size: 18px;
-                font-weight: 700;
-            }
-            QLabel[class="cardSubtitle"] {
-                font-size: 13px;
-            }
-            #activityCard, #metricChip {
-                background: rgba(255,255,255,0.035);
-                border: 1px solid rgba(255,255,255,0.07);
-                border-radius: 22px;
-            }
-            #statusChip, #statusChipAccent {
-                padding: 10px 14px;
-                border-radius: 16px;
-                background: rgba(255,255,255,0.05);
-                border: 1px solid rgba(255,255,255,0.06);
-            }
-            #statusChipAccent {
-                background: rgba(29,213,192,0.12);
-                border-color: rgba(29,213,192,0.24);
-                color: #82f4e5;
-            }
-            #analyzeButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6d5ef7, stop:1 #18c7b1);
-                color: white;
-                padding: 14px 22px;
-                border-radius: 18px;
-                font-size: 15px;
-                font-weight: 700;
-            }
-            #analyzeButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #8072ff, stop:1 #24e2ca);
-            }
-            #secondaryButton {
-                background: rgba(255,255,255,0.07);
-                border: 1px solid rgba(255,255,255,0.10);
-                padding: 12px 18px;
-                border-radius: 16px;
-                font-weight: 600;
-            }
-            #inputTitle {
-                font-size: 22px;
-                font-weight: 700;
-            }
-            #editor, #lineInput {
-                background: rgba(255,255,255,0.035);
-                border: 1px solid rgba(255,255,255,0.07);
-                border-radius: 18px;
-                padding: 14px;
-                selection-background-color: #6d5ef7;
-            }
-            #editor {
-                min-height: 230px;
-            }
-            #fileLabel {
-                padding: 16px;
-                border-radius: 16px;
-                background: rgba(255,255,255,0.035);
-                border: 1px dashed rgba(255,255,255,0.18);
-                color: #cdd4e1;
-            }
-            #verdictHero {
-                border-radius: 24px;
-                border: 1px solid rgba(165,155,255,0.20);
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(109,94,247,0.22), stop:1 rgba(24,199,177,0.12));
-            }
-            #verdictHero[verdictTone="success"] {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(26,182,110,0.28), stop:1 rgba(18,64,45,0.32));
-                border: 1px solid rgba(92,232,162,0.26);
-            }
-            #verdictHero[verdictTone="danger"] {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(239,87,120,0.30), stop:1 rgba(78,21,49,0.34));
-                border: 1px solid rgba(255,130,160,0.22);
-            }
-            #verdictHero[verdictTone="warning"] {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 rgba(255,182,72,0.28), stop:1 rgba(90,48,16,0.34));
-                border: 1px solid rgba(255,210,125,0.22);
-            }
-            #verdictBadge {
-                padding: 8px 12px;
-                border-radius: 14px;
-                background: rgba(255,255,255,0.10);
-                color: white;
-                font-size: 11px;
-                font-weight: 800;
-                letter-spacing: 1.2px;
-            }
-            #verdictTitle {
-                font-size: 30px;
-                font-weight: 800;
-            }
-            #resultCard {
-                background: rgba(255,255,255,0.035);
-                border: 1px solid rgba(255,255,255,0.07);
-                border-radius: 22px;
-            }
-            #sectionTitle {
-                font-size: 17px;
-                font-weight: 700;
-            }
-            #sectionBody {
-                background: transparent;
-                color: #dfe7ff;
-            }
-            #sectionBody a {
-                color: #7edcff;
-            }
-            #metricLabel {
-                color: #93a0b8;
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 1.2px;
-                text-transform: uppercase;
-            }
-            #metricValue {
-                color: #eef2ff;
-                font-size: 18px;
-                font-weight: 700;
-            }
-            #progressBar {
-                background: rgba(255,255,255,0.04);
-                border-radius: 10px;
-                min-height: 8px;
-            }
-            #progressBar::chunk {
-                border-radius: 10px;
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6d5ef7, stop:1 #18c7b1);
-            }
-            QScrollArea, QScrollBar:vertical, QScrollBar:horizontal {
-                background: transparent;
-            }
-        """)
+        self.setStyleSheet(get_stylesheet())
 
 
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("Truth Lens Desktop")
+    app.setApplicationName("Satya:- fake news and deepfakes detectores")
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

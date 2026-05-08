@@ -1,0 +1,7 @@
+\chapter*{Abstract}
+
+The proliferation of hyper-realistic deepfakes and AI-generated disinformation poses a severe threat to public trust and information integrity. This project presents \textbf{Satya}, a sophisticated multimodal verification assistant engineered to detect fake news and deceptive media. Unlike standard binary classifiers, Satya is designed as a Generative AI-powered system that analyzes text, extracts context from images, and inspects video for visual and audio manipulation cues. 
+
+The core problem solved is the lack of reasoning in traditional detection mechanisms; users need to know \textit{why} a piece of news is fake, not just a probability score. To resolve this, our methodology employs a microservices-based architecture utilizing React and FastAPI, integrated with large language models (such as Google Gemini). The system performs input understanding, evidence retrieval, and generative verification, outputting a structured report encompassing a verdict, confidence score, detected claims, and supporting evidence. 
+
+By leveraging GenAI for deep synthesis and asynchronous processing frameworks (RabbitMQ, Redis) for heavy video workloads, Satya represents a scalable, comprehensive approach to modern misinformation analysis. The resulting system successfully demonstrates the capacity to act as an AI-assisted verification tool, providing robust, explainable insights essential for countering digital deception in real-world scenarios.

@@ -1,0 +1,79 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\titleformat{\section}{\large\bfseries\color{teal}}{}{0em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{darkgray}}{}{0em}{}
+
+\title{\textbf{Comprehensive Contribution Report: Aastha \\ Backend Logic \& Content Analysis Specialist}}
+\author{Satya Project Team}
+\date{May 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction \& Role Overview}
+Aastha served as the \textbf{Logic and Analysis Specialist} for the "Satya" project. While Mohit focused on the structural architecture, Aastha was responsible for the "Brain" of the application—the \textbf{Content Service}. Her work involved developing the complex pipelines that take raw text, URLs, or images and transform them into a detailed verification report. Her role required a deep understanding of Natural Language Processing (NLP), GenAI orchestration, and data extraction techniques.
+
+\section{Core Contribution: The Multi-Stage Verification Pipeline}
+Aastha's most significant achievement was moving beyond simple "API calls" to a sophisticated \textbf{Reasoning Pipeline}. She realized that directly asking an LLM "Is this news fake?" often leads to hallucinations or biased answers.
+
+\subsection{Design of the Reasoning Logic}
+Aastha implemented a four-stage process for verification:
+1. \textbf{Claim Extraction:} Using NLP techniques to identify specific, checkable factual claims within a large block of text.
+2. \textbf{Search Parameter Optimization:} Automatically generating highly specific search queries for each claim to retrieve evidence from the real-time web.
+3. \textbf{Fact-Checking & Evidence Gathering:} Parsing search results to find supporting or contradicting information from reputable news agencies, government databases, and academic journals.
+4. \textbf{Verdict Synthesis:} Using a "Chain-of-Thought" prompting technique to force the model to explain its reasoning step-by-step before arriving at a final verdict (REAL/FAKE).
+
+\section{Image Analysis & OCR Integration}
+To handle image-based misinformation (e.g., screenshots of fake tweets or news headlines), Aastha developed the \textbf{OCR (Optical Character Recognition) Pipeline}.
+
+\subsection{Implementing Tesseract OCR}
+She integrated \textbf{Tesseract} into the Python backend. However, she found that raw OCR is often unreliable for images with complex backgrounds. 
+\begin{itemize}
+    \item \textbf{Pre-processing:} She implemented image cleaning scripts (using libraries like OpenCV) to increase contrast and reduce noise before the OCR stage.
+    \item \textbf{LLM-driven Post-processing:} realizing OCR often outputs "garbage" characters, she designed a secondary LLM step that takes the fragmented OCR text and reconstructs it into coherent sentences based on context. This "contextual cleaning" significantly improved detection accuracy.
+\end{itemize}
+
+\section{URL Scraping & Content Extraction}
+Aastha built the \textbf{Web Extraction Module}. When a user submits a URL, the system must extract the article body while ignoring ads, footers, and sidebars.
+
+\subsection{Implementation Details}
+\begin{itemize}
+    \item \textbf{Scraper Logic:} She used advanced scraping libraries to identify the main \texttt{<article>} or \texttt{<div>} tags containing the story.
+    \item \textbf{Sanitization:} Implemented a sanitization layer that removes HTML tags, scripts, and non-UTF8 characters, ensuring the GenAI models receive "clean" text, which reduces token usage and improves processing speed.
+\end{itemize}
+
+\section{Design Philosophy: Factual Grounding}
+Aastha's design philosophy was centered on \textbf{Factual Grounding}. She insisted that every verdict must be accompanied by \textbf{Citations}.
+\begin{itemize}
+    \item \textbf{Why Citations?} In the fight against fake news, a "black box" answer is not enough. By providing URLs and snippets of evidence, Aastha’s logic builds trust with the user and allows for manual verification.
+    \item \textbf{Confidence Scoring:} She implemented a mathematical model to calculate a "Confidence Score" based on the consistency of the evidence found and the reputation of the sources.
+\end{itemize}
+
+\section{Advanced Interview Preparation: Q&A}
+
+\subsection{Q1: How do you handle cases where different sources provide conflicting information?}
+\textbf{Answer:} "This is where our 'Synthesis Engine' comes in. Instead of just picking one source, the model is prompted to evaluate the credibility and recency of each source. For example, a recent report from a major news agency is given more weight than an older post from an unknown blog. We also provide 'Uncertainty Notes' in the final report if the evidence is genuinely inconclusive."
+
+\subsection{Q2: Why did you choose a multi-stage pipeline instead of just one prompt?}
+\textbf{Answer:} "A single prompt is limited by the model's 'context window' and its tendency to take shortcuts. By breaking the task into extraction, searching, and synthesis, we ensure that the model focuses on one sub-task at a time. This modular approach makes the output more accurate, more explainable, and easier to debug."
+
+\subsection{Q3: How do you deal with 'Prompt Injection' or attempts to bypass the filter?}
+\textbf{Answer:} "We use strict input sanitization and 'System Prompts' that define the model's behavior as an objective fact-checker. We also implement a 'Guardrail' check that validates the output format (JSON) to ensure that the backend can always parse the result, even if the model tries to output conversational text."
+
+\section{Technical Terms to Master}
+\begin{itemize}
+    \item \textbf{Few-Shot Prompting:} Providing examples to the model to improve performance.
+    \item \textbf{Grounding:} Anchoring AI responses in external, verified facts.
+    \item \textbf{Contextual De-noising:} Using AI to clean up errors made by OCR.
+    \item \textbf{Chain-of-Thought (CoT):} A technique to improve reasoning in LLMs.
+\end{itemize}
+
+\end{document}

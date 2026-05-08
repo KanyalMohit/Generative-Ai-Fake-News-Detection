@@ -1,0 +1,78 @@
+\chapter{Phases of Software Development Cycle}
+
+The development of the Satya verification system adhered strictly to an Agile Software Development Life Cycle (SDLC). This approach prioritized rapid prototyping, continuous integration of the generative AI pipelines, and the flexibility to pivot the core architecture from a monolithic script to a highly resilient microservices ecosystem. This chapter details the distinct phases of the SDLC and the rigorous requirements established to support the system.
+
+\section{Phase 1: Requirement Analysis}
+The initial phase involved identifying the severe limitations of existing fake news classifiers. Extensive requirement gathering dictated that the new system must not only categorize data but also explain its reasoning. 
+
+\textbf{Key Functional Requirements defined:}
+\begin{itemize}
+    \item The system must accept text, URLs, images, and video files.
+    \item The final output must be a structured report (Verdict, Confidence, Evidence).
+    \item Video processing must not block or freeze the main user interface.
+\end{itemize}
+
+\textbf{Key Non-Functional Requirements defined:}
+\begin{itemize}
+    \item The API Gateway must handle concurrent connections efficiently.
+    \item The backend must gracefully manage the heavy memory footprint of locally embedded Large Language Models and rapid semantic searches against the Vector Database.
+    \item UI rendering must be highly responsive to provide real-time updates on background worker statuses.
+\end{itemize}
+
+\section{Phase 2: System Design and Architecture}
+Following the requirement gathering, the system architecture was drafted. A deliberate decision was made to avoid a monolithic backend. Instead, we architected a microservices topology consisting of:
+\begin{enumerate}
+    \item A centralized \textbf{API Gateway} to handle routing and client communication.
+    \item A synchronous \textbf{Content Service} for rapid text and image AI processing.
+    \item An asynchronous \textbf{Video Worker Service} decoupled via a RabbitMQ message broker to handle intensive deepfake analysis.
+\end{enumerate}
+
+\section{Hardware Requirements}
+Due to the heavy computational nature of multimedia processing, deepfake inspection, and continuous containerized service orchestration, the system necessitates a robust hardware environment. The following specifications outline the recommended local hardware profile:
+
+\begin{itemize}
+    \item \textbf{Processor:} Multi-core CPU (Intel Core i5 / AMD Ryzen 5 or higher). A higher core count is strictly necessary for handling concurrent API routing alongside computationally expensive localized computer vision tasks (like OCR extraction before passing to the LLM).
+    \item \textbf{RAM:} Minimum 16 GB required. A significant portion of this memory is allocated toward video buffer processing, maintaining the in-memory Redis cache, and running the node processes for the frontend development server.
+    \item \textbf{Disk Space:} At least 50 GB of free solid-state storage (SSD) is recommended to accommodate large video uploads, temporary processing artifacts, RabbitMQ queue data, and the isolated Python virtual environments for multiple backend services.
+    \item \textbf{GPU (Optional but Highly Recommended):} While heavy generative tasks are offloaded to Google's cloud infrastructure via the Gemini API, localized inference modules benefit heavily from an NVIDIA GPU (e.g., RTX 3060 or higher) utilizing CUDA to accelerate frame extraction and localized model evaluations.
+\end{itemize}
+
+\section{Software Requirements}
+The software stack was meticulously selected to ensure high performance, ease of asynchronous operations, and robust community support for cutting-edge AI and ML libraries.
+
+\begin{itemize}
+    \item \textbf{Core Programming Languages:}
+    \begin{itemize}
+        \item \textbf{Python (v3.8+):} Chosen as the primary language for all backend microservices, data processing pipelines, web scraping, and LLM SDK integrations due to its unmatched data science ecosystem.
+        \item \textbf{JavaScript / TypeScript (Node.js v18+):} Utilized for engineering the frontend web application and managing its complex build dependencies.
+    \end{itemize}
+    
+    \item \textbf{Backend Frameworks and Tools:}
+    \begin{itemize}
+        \item \textbf{FastAPI:} A modern, aggressively fast web framework for building APIs. Selected over alternatives like Flask or Django specifically for its native asynchronous (\texttt{async/await}) support, Pydantic data validation, and automatic OpenAPI (\texttt{/docs}) documentation generation.
+        \item \textbf{BeautifulSoup4 \& Requests:} Implemented as the core scraping middleware for robust URL text extraction and DOM parsing.
+        \item \textbf{Uvicorn:} The lightning-fast ASGI web server implementation utilized to run the FastAPI instances in production or development environments.
+    \end{itemize}
+    
+    \item \textbf{Frontend Frameworks:}
+    \begin{itemize}
+        \item \textbf{React (with Vite):} Selected as the core UI library for architecting a fast, highly interactive Single Page Application (SPA). Vite was used as the build tool to significantly decrease hot-module reloading (HMR) times during development.
+        \item \textbf{Tailwind CSS:} A utility-first CSS framework implemented to rapidly construct a responsive, modern user interface without the overhead of massive custom stylesheets.
+    \end{itemize}
+    
+    \item \textbf{Distributed Infrastructure and State Management:}
+    \begin{itemize}
+        \item \textbf{RabbitMQ:} Integrated as the central message broker via the Advanced Message Queuing Protocol (AMQP). It securely queues intensive video analysis jobs, completely decoupling them from the synchronous API gateway to prevent timeout errors.
+        \item \textbf{Redis:} Utilized as an ephemeral, lightning-fast in-memory data structure store to maintain video job status enumerations (Queued, Processing, Completed) and transient analysis results.
+        \item \textbf{Docker & Docker Compose:} Instrumental for containerizing the required RabbitMQ and Redis infrastructure, ensuring environment parity across different developer machines.
+    \end{itemize}
+    
+    \item \textbf{External AI Application Programming Interfaces:}
+    \begin{itemize}
+        \item \textbf{Google Gemini \& Perplexity Architectures:} Integrated within the system to serve as the foundational generative engines. These models are tasked with primary research synthesis, executing structured report generation, and conducting deep multimodal entity analysis.
+        \item \textbf{Vector Database (e.g., ChromaDB/Pinecone):} Essential for the Retrieval-Augmented Generation (RAG) pipeline. The database houses high-dimensional vector embeddings of pre-verified, highly credible news sites and research data, ensuring the LLMs base their verdicts on scored, factual context.
+    \end{itemize}
+\end{itemize}
+
+\section{Phase 3 \& 4: Implementation and Testing}
+The implementation phase involved translating the architectural design into the respective Python and React codebases (detailed extensively in Chapter 3). Concurrent with implementation was the Testing phase (Chapter 5), which utilized continuous evaluation loops to refine the semantic retrieval accuracy of the Vector DB and the structured output of the integrated LLMs, actively mitigating the risk of "hallucinations."

@@ -1,0 +1,87 @@
+\chapter{Coding of Functions and System Architecture}
+
+\section{Microservices System Architecture}
+Project Satya operates on a highly resilient, microservices-based architecture to ensure robust performance, especially when handling computationally expensive tasks like computer vision operations and deepfake video inference. A deliberate architectural decision was made to eschew a single, monolithic backend. Instead, the system is divided into specialized, standalone services that communicate via defined APIs and message brokers:
+
+\begin{itemize}
+    \item \textbf{API Gateway (Port 8000):} Developed using FastAPI, this serves as the primary entry point for all frontend client origin requests. It handles Cross-Origin Resource Sharing (CORS) policies, request validation via Pydantic models, and proxying. For synchronous text and image processing, it directly proxies the payload to the Content Service. For asynchronous video tasks, it manages the orchestration of uploading temporary files, mutating state in Redis, and publishing payloads to RabbitMQ.
+    
+    \item \textbf{Content Service (Port 8001):} This service executes Python's BeautifulSoup4 to fetch and parse URL Document Object Models (DOMs), extracts visible text from uploaded images, and orchestrates the \textbf{Retrieval-Augmented Generation (RAG)} memory pipeline. It queries the local Vector Database for semantic matches before passing the enriched payload to the integrated Gemini/Perplexity LLM architecture.
+    
+    \item \textbf{Video Worker Service:} This is a background daemon process, entirely decoupled from the HTTP request/response lifecycle. It operates continuously, consuming heavy video analysis jobs from the RabbitMQ message queue, executing frame-by-frame processing (or passing the payload to a designated Vision model), and writing the generated verification reports back to the shared Redis datastore.
+\end{itemize}
+
+\section{Retrieval-Augmented Generation (RAG) Implementation}
+The core intelligence of Project Satya relies on grounding the generative models with pre-verified facts. Rather than relying on the LLM's internal memory (which is prone to hallucination) or volatile live web searches, the system utilizes a curated Vector Database. This database houses high-dimensional embeddings of parsed articles from domains with exceptionally high credibility scores.
+
+When a user submits a claim, the system first embeds the claim and performs a cosine-similarity search against the Vector DB. The top-$K$ most relevant, highly credible documents are retrieved and injected into the LLM's context window.
+
+The following code snippet demonstrates the implementation of this RAG-based prompt engineering:
+
+\begin{lstlisting}[language=Python, caption=Production RAG Module utilizing Vector DB Semantic Search]
+import json
+import logging
+from sentence_transformers import SentenceTransformer
+import chromadb # Example Vector Database client
+from app.models.gemini_integration import EmbeddedGeminiModel
+
+# Initialize the embedded embedding model and Vector DB client
+embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+chroma_client = chromadb.Client()
+collection = chroma_client.get_collection(name="credible_news_sources")
+
+def analyze_claim_with_rag(claim_text: str) -> dict:
+    """
+    Executes a semantic search against the Vector Database and constructs 
+    a rigid prompt demanding a structured JSON schema response from the LLM.
+    """
+    
+    try:
+        # Step 1: Evidence Retrieval via Semantic Search
+        claim_embedding = embedding_model.encode(claim_text).tolist()
+        search_results = collection.query(
+            query_embeddings=[claim_embedding],
+            n_results=3
+        )
+        
+        # Format the retrieved credible evidence
+        retrieved_documents = search_results['documents'][0]
+        context_str = "\n".join(retrieved_documents)
+        
+        # Step 2: Prompt Engineering
+        prompt = f"""
+        You are an expert, impartial fact-checker. You MUST analyze the Following Claim 
+        using ONLY the provided Contextual Evidence retrieved from our high-credibility 
+        database. Do not use outside knowledge.
+        
+        Claim to Verify: "{claim_text}"
+        
+        Contextual Evidence Available:
+        {context_str}
+        
+        You must adhere to the following strict JSON schema:
+        {{
+            "verdict": "True | False | Misleading | Unverified",
+            "confidence_score": <integer from 0 to 100>,
+            "detected_claims": ["claim 1", "claim 2"],
+            "evidence_for": ["supporting point 1 from context"],
+            "evidence_against": ["contradictory point 1 from context"],
+            "reasoning": "A highly detailed paragraph explaining the logical rationale behind your verdict, citing specific data points from the evidence."
+        }}
+        """
+        
+        # Step 3: Generative Verification
+        llm = EmbeddedGeminiModel(temperature=0.2)
+        response_text = llm.generate(prompt)
+        
+        # Strip potential markdown artifacts and parse the JSON string
+        sanitized_text = response_text.replace('```json', '').replace('```', '').strip()
+        result_json = json.loads(sanitized_text)
+        return result_json
+        
+    except Exception as e:
+        logging.error(f"RAG Pipeline failure: {e}")
+        return {"error": "System failure during claim verification", "details": str(e)}
+\end{lstlisting}
+
+This function is a cornerstone of the system. By explicitly defining the schema mapped to Python dictionaries and subsequently typing the output interfaces in the frontend TypeScript files, the application guarantees that downstream UI components receive deterministic, predictably parseable JSON rather than arbitrary conversational dialogue. This enables the frontend to programmatically display the "confidence score" via a visual progress bar and map the evidence arrays into bulleted lists.
