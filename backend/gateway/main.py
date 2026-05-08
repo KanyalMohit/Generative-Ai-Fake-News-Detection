@@ -34,9 +34,11 @@ def read_root():
 
 @app.post("/analyze/text")
 async def proxy_analyze_text(payload: dict):
+    # Strip is_url — text-only mode, no URL fetching
+    forwarded = {"content": payload.get("content", "")}
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.post(f"{CONTENT_SERVICE_URL}/analyze/text", json=payload, timeout=60.0)
+            response = await client.post(f"{CONTENT_SERVICE_URL}/analyze/text", json=forwarded, timeout=120.0)
             return response.json()
         except httpx.RequestError as exc:
             raise HTTPException(status_code=503, detail=f"Content service unavailable: {str(exc)}")

@@ -2,13 +2,12 @@ fastapi
 uvicorn
 requests
 beautifulsoup4
-perplexityai
 python-multipart
 pillow
 python-dotenv
 openai
 numpy
-google-generativeai
+google-genai
 pika
 redis
 httpx

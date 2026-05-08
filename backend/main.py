@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-from services.perplexity_client import analyze_claim
+from services.claim_analyzer import analyze_claim
 from services.text_analyzer import fetch_text_from_url
 from services.image_analyzer import extract_text_from_image
 

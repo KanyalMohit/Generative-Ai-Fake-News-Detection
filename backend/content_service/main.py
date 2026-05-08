@@ -1,16 +1,22 @@
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body
+import logging
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 
-from services.perplexity_client import analyze_claim
-from services.text_analyzer import fetch_text_from_url
+from services.claim_analyzer import analyze_claim
 from services.image_analyzer import extract_text_from_image
 
-app = FastAPI(title="Fake News Detector - Content Service")
+# ── Logging config: show INFO+ from all our modules ─────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
-# Allow CORS
+app = FastAPI(title="Satya — Content Analysis Service")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,86 +25,78 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class TextAnalysisRequest(BaseModel):
     content: str
-    is_url: bool = False
+
 
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "Content Service is running"}
+    return {"status": "ok", "message": "Satya Content Service is running"}
+
 
 @app.post("/analyze/text")
 def analyze_text_route(request: TextAnalysisRequest):
     """
-    Analyzes text or content from a URL to check if it's Real or Fake.
+    Analyzes plain text for fake news / misinformation.
+    URL support has been removed — text input only.
     """
-    try:
-        text_to_analyze = request.content
-        context_url = None
+    text = request.content.strip()
+    logger.info(f"[/analyze/text] Received request — {len(text)} chars")
 
-        if request.is_url:
-            print(f"Fetching text from URL: {request.content}")
-            fetched_text = fetch_text_from_url(request.content)
-            if not fetched_text:
-                raise HTTPException(status_code=400, detail="Could not extract text from URL.")
-            text_to_analyze = fetched_text
-            context_url = request.content
-        
-        if not text_to_analyze or len(text_to_analyze.strip()) < 10:
-             raise HTTPException(status_code=400, detail="Text is too short for analysis.")
+    if len(text) < 10:
+        logger.warning("[/analyze/text] Rejected: text too short.")
+        raise HTTPException(status_code=400, detail="Text is too short for analysis. Please provide at least a sentence.")
 
-        print(f"Analyzing text length: {len(text_to_analyze)}")
-        result = analyze_claim(text_to_analyze, context_url)
-        
-        if "error" in result:
-             raise HTTPException(status_code=500, detail=result["error"])
-             
-        return result
+    result = analyze_claim(text)
 
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Error in text analysis: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    if isinstance(result, dict) and "error" in result:
+        logger.error(f"[/analyze/text] analyze_claim returned error: {result['error']}")
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    logger.info(f"[/analyze/text] Done — label={result.get('label')} confidence={result.get('confidence')}")
+    return result
+
 
 @app.post("/analyze/image")
 async def analyze_image_route(file: UploadFile = File(...)):
     """
-    Extracts text from an uploaded image using OCR and analyzes it.
+    Extracts text from an uploaded image using Gemini Vision and analyzes it.
     """
     try:
-        print(f"Received image: {file.filename}")
+        logger.info(f"[/analyze/image] Received file: {file.filename}")
         contents = await file.read()
-        
-        # 1. Extract text
+        logger.info(f"[/analyze/image] File size: {len(contents)} bytes")
+
         extracted_text = extract_text_from_image(contents)
-        print(f"OCR Result: {extracted_text[:100]}...")
-        
+        logger.info(f"[/analyze/image] Extraction complete — {len(extracted_text)} chars")
+
         if "Error:" in extracted_text and "Tesseract" in extracted_text:
-             raise HTTPException(status_code=500, detail=extracted_text)
-        
+            logger.error(f"[/analyze/image] Tesseract error: {extracted_text[:200]}")
+            raise HTTPException(status_code=500, detail=extracted_text)
+
         if not extracted_text.strip():
-             raise HTTPException(status_code=400, detail="No text detected in the image.")
+            logger.warning("[/analyze/image] No text extracted from image.")
+            raise HTTPException(status_code=400, detail="No readable text detected in the image.")
 
-        # 2. Analyze text
         result = analyze_claim(extracted_text)
-        
-        # Merge OCR text into result for frontend display
         result["extracted_text"] = extracted_text
-        
-        if "error" in result:
-             raise HTTPException(status_code=500, detail=result["error"])
 
+        if isinstance(result, dict) and "error" in result:
+            logger.error(f"[/analyze/image] analyze_claim returned error: {result['error']}")
+            raise HTTPException(status_code=500, detail=result["error"])
+
+        logger.info(f"[/analyze/image] Done — label={result.get('label')}")
         return result
 
-    except HTTPException as he:
-        raise he
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error in image analysis: {e}")
+        logger.error(f"[/analyze/image] Unhandled exception: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
-    # HTTP Service runs on 8001 (or env PORT)
     port = int(os.getenv("PORT", 8001))
     uvicorn.run(app, host="0.0.0.0", port=port)

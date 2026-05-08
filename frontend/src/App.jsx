@@ -1,23 +1,84 @@
 import React from 'react';
-import Detector from './components/Detector';
+import { Routes, Route, useLocation, Link, NavLink } from 'react-router-dom';
+import Home from './pages/Home';
+import Analysis from './pages/Analysis';
+import About from './pages/About';
+
+function Navbar() {
+  return (
+    <nav className="navbar">
+      <div className="navbar-inner">
+        <Link to="/" className="logo">
+          <div className="logo-icon">S</div>
+          <span className="logo-text">Satya</span>
+        </Link>
+
+        <ul className="nav-links">
+          <li>
+            <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+              🏠 Home
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/analyze" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+              🔬 Analyze
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/about" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+              ℹ️ About
+            </NavLink>
+          </li>
+        </ul>
+
+        <Link to="/analyze">
+          <button className="btn-primary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}>
+            Get Started →
+          </button>
+        </Link>
+      </div>
+    </nav>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="footer">
+      <div className="footer-inner">
+        <div className="logo" style={{ textDecoration: 'none' }}>
+          <div className="logo-icon" style={{ width: '1.75rem', height: '1.75rem', fontSize: '0.8rem' }}>S</div>
+          <span className="logo-text" style={{ fontSize: '1.1rem' }}>Satya</span>
+        </div>
+        <p className="footer-copy">© {new Date().getFullYear()} Project Satya — Engineered for Digital Integrity</p>
+        <div className="footer-links">
+          <a href="#" className="footer-link">Docs</a>
+          <a href="#" className="footer-link">Privacy</a>
+          <a href="#" className="footer-link">GitHub</a>
+        </div>
+      </div>
+    </footer>
+  );
+}
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 py-12 px-4 selection:bg-indigo-100 selection:text-indigo-900">
-      <div className="max-w-5xl mx-auto text-center mb-12">
-        <h1 className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500 mb-4 tracking-tight">
-          Truth Lens
-        </h1>
-        <p className="text-xl text-slate-500 font-light max-w-3xl mx-auto leading-relaxed">
-          GenAI-powered fake news detection and verification for text, images, and deepfake video analysis.
-        </p>
-      </div>
+    <div style={{ minHeight: '100vh', position: 'relative' }}>
+      {/* Ambient blobs */}
+      <div className="blob blob-tl" />
+      <div className="blob blob-br" />
 
-      <Detector />
+      <Navbar />
 
-      <div className="max-w-2xl mx-auto mt-16 text-center text-slate-400 text-sm">
-        <p>© {new Date().getFullYear()} Truth Lens. Powered by Gemini, with optional Perplexity enrichment.</p>
-      </div>
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/analyze" element={<Analysis />} />
+          <Route path="/about" element={<About />} />
+          <Route path="*" element={<Home />} />
+        </Routes>
+      </main>
+
+      <Footer />
     </div>
   );
 }

@@ -1,21 +1,23 @@
 import os
-import google.generativeai as genai
 import json
 import re
+from google import genai
+from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
 
-GENAI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 
 class GenAIClient:
     def __init__(self):
-        if GENAI_API_KEY:
-            genai.configure(api_key=GENAI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-3-flash-preview')
+        if GEMINI_API_KEY:
+            self.client = genai.Client(api_key=GEMINI_API_KEY)
+            self.model = "gemini-2.5-flash"
         else:
-            print("Warning: GEMINI_API_KEY not set. Gen AI features will not work.")
+            print("Warning: GEMINI_API_KEY not set. GenAI features will not work.")
+            self.client = None
             self.model = None
 
     def clean_json_output(self, text: str):
@@ -34,20 +36,22 @@ class GenAIClient:
             return {"error": "Failed to parse JSON output", "raw_reply": text}
 
     def generate_text(self, prompt: str):
-        if not self.model:
-            return {"error": "Gen AI functionality not configured."}
+        if not self.client:
+            return {"error": "GenAI not configured — missing GEMINI_API_KEY."}
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+            )
             return {"text": response.text}
         except Exception as e:
-            return {"error": f"Gemini Generation Failed: {str(e)}"}
+            return {"error": f"Gemini generation failed: {str(e)}"}
 
-    def refine_analysis(self, claim_text: str, prompt_or_research_data: str, citations: list):
-        if not self.model:
-            return {"error": "Gen AI functionality not configured."}
+    def refine_analysis(self, claim_text: str, prompt: str, citations: list):
+        if not self.client:
+            return {"error": "GenAI not configured — missing GEMINI_API_KEY."}
 
-        prompt = prompt_or_research_data.strip()
-
+        # Use the passed prompt directly if it already has the JSON structure
         if 'Return ONLY valid JSON with exactly these keys:' not in prompt:
             prompt = f"""
 You are an expert Fact Checker and News Analyst.
@@ -55,12 +59,9 @@ You are an expert Fact Checker and News Analyst.
 Original Claim/Content:
 \"{claim_text[:2000]}\"
 
-Research Data:
-\"{prompt_or_research_data[:10000]}\"
-
 Return ONLY valid JSON with these keys:
 {{
-    "label": "REAL", "FAKE", or "UNKNOWN",
+    "label": "REAL" | "FAKE" | "MISLEADING" | "UNVERIFIED",
     "confidence": 0,
     "summary": "A short summary.",
     "credibility_analysis": {{
@@ -77,10 +78,13 @@ Return ONLY valid JSON with these keys:
 """
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+            )
             return self.clean_json_output(response.text)
         except Exception as e:
-            return {"error": f"Gemini Refinement Failed: {str(e)}"}
+            return {"error": f"Gemini refinement failed: {str(e)}"}
 
 
 genai_client = GenAIClient()
