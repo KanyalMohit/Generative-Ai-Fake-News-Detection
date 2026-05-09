@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Infrastructure
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # Backend Services
+  api-gateway:
+    build:
+      context: ./backend
+      dockerfile: gateway.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - CONTENT_SERVICE_URL=http://content-service:8001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      # Add API Keys here or in .env
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - redis
+      - rabbitmq
+
+  content-service:
+    build:
+      context: ./backend
+      dockerfile: content_service.Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - api-gateway
+
+  video-worker:
+    build:
+      context: ./backend
+      dockerfile: video_service.Dockerfile
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - rabbitmq
+      - redis
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway

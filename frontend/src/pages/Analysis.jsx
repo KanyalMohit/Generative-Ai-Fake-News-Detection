@@ -57,9 +57,10 @@ export default function Analysis() {
 
   useEffect(() => {
     if (!polling || !jobId) return;
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     const iv = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/analyze/video/${jobId}`);
+        const res = await fetch(`${API_BASE_URL}/analyze/video/${jobId}`);
         const data = await res.json();
         if (data.status === 'COMPLETED') {
           setResult(JSON.parse(data.result));
@@ -80,22 +81,23 @@ export default function Analysis() {
   }, [polling, jobId]);
 
   const analyze = async () => {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     setLoading(true);
     setError(null);
     setResult(null);
     try {
       let endpoint, body, headers = {};
       if (mode === 'text') {
-        endpoint = 'http://localhost:8000/analyze/text';
+        endpoint = `${API_BASE_URL}/analyze/text`;
         body = JSON.stringify({ content: inputText });
         headers = { 'Content-Type': 'application/json' };
       } else if (mode === 'image') {
-        endpoint = 'http://localhost:8000/analyze/image';
+        endpoint = `${API_BASE_URL}/analyze/image`;
         const fd = new FormData();
         fd.append('file', file);
         body = fd;
       } else {
-        endpoint = 'http://localhost:8000/analyze/video';
+        endpoint = `${API_BASE_URL}/analyze/video`;
         const fd = new FormData();
         fd.append('file', file);
         body = fd;
