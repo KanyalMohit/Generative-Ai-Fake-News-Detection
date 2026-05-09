@@ -57,7 +57,7 @@ export default function Analysis() {
 
   useEffect(() => {
     if (!polling || !jobId) return;
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || '/_/backend';
     const iv = setInterval(async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/analyze/video/${jobId}`);
@@ -81,7 +81,7 @@ export default function Analysis() {
   }, [polling, jobId]);
 
   const analyze = async () => {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || '/_/backend';
     setLoading(true);
     setError(null);
     setResult(null);
