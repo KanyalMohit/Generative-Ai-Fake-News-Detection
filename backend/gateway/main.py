@@ -25,12 +25,8 @@ CONTENT_SERVICE_URL = os.getenv("CONTENT_SERVICE_URL", "http://localhost:8001")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
-# Redis Client — optional, only needed for video job tracking
-try:
-    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
-    r.ping()
-except Exception:
-    r = None
+# Redis Client
+r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
 @app.get("/")
 def read_root():
@@ -68,12 +64,10 @@ async def analyze_video_route(file: UploadFile = File(...)):
     Accepts video, saves it locally (shared volume in prod, local dir here),
     publishes job to RabbitMQ, returns job_id.
     """
-    if r is None:
-        raise HTTPException(status_code=503, detail="Video analysis is not available in this deployment (Redis/RabbitMQ not configured).")
-
     job_id = str(uuid.uuid4())
     
     # Save video temporarily
+    # Ensure uploads dir exists
     os.makedirs("uploads", exist_ok=True)
     video_path = f"uploads/{job_id}_{file.filename}"
     
@@ -94,8 +88,6 @@ async def analyze_video_route(file: UploadFile = File(...)):
 
 @app.get("/analyze/video/{job_id}")
 def get_video_status(job_id: str):
-    if r is None:
-        raise HTTPException(status_code=503, detail="Video analysis is not available in this deployment.")
     job = r.hgetall(f"job:{job_id}")
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")

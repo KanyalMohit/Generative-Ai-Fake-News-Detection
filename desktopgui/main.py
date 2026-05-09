@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -84,7 +83,6 @@ class MainWindow(QMainWindow):
 
         card_data = [
             ("Text", "Paste a claim, article, or long post and verify the core narrative.", ASSETS_DIR / "text_mode.svg", "text"),
-            ("URL", "Point to a story link and let the backend inspect the page before scoring.", ASSETS_DIR / "url_mode.svg", "url"),
             ("Image", "Analyze screenshots, posters, memes, and visual misinformation.", ASSETS_DIR / "image_mode.svg", "image"),
             ("Video", "Queue deepfake analysis and watch the verdict pipeline complete.", ASSETS_DIR / "video_mode.svg", "video"),
         ]
@@ -143,7 +141,6 @@ class MainWindow(QMainWindow):
 
         self.stack = QStackedWidget()
         self.stack.addWidget(self.build_text_page())
-        self.stack.addWidget(self.build_url_page())
         self.stack.addWidget(self.build_image_page())
         self.stack.addWidget(self.build_video_page())
         outer.addWidget(self.stack)
@@ -227,23 +224,6 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.text_input)
         return page
 
-    def build_url_page(self):
-        page = QFrame()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
-        heading = QLabel("Verify a URL")
-        heading.setObjectName("inputTitle")
-        desc = QLabel("Drop in an article or post link and let the backend fetch page text before analysis.")
-        desc.setObjectName("inputSubtitle")
-        self.url_input = QLineEdit()
-        self.url_input.setPlaceholderText("https://example.com/news-story")
-        self.url_input.setObjectName("lineInput")
-        layout.addWidget(heading)
-        layout.addWidget(desc)
-        layout.addWidget(self.url_input)
-        layout.addStretch()
-        return page
 
     def build_image_page(self):
         page = QFrame()
@@ -289,11 +269,10 @@ class MainWindow(QMainWindow):
 
     def select_mode(self, mode: str):
         self.selected_mode = mode
-        self.stack.setCurrentIndex({"text": 0, "url": 1, "image": 2, "video": 3}[mode])
+        self.stack.setCurrentIndex({"text": 0, "image": 1, "video": 2}[mode])
         self.update_mode_ui()
         prompts = {
             "text": "Ready to inspect pasted text for misinformation patterns.",
-            "url": "Ready to fetch and analyze a live article URL.",
             "image": "Ready to send an image through the visual analysis flow.",
             "video": "Ready to queue deepfake inspection through the backend worker.",
         }
@@ -305,7 +284,6 @@ class MainWindow(QMainWindow):
         self.mode_chip.setText(f"Mode: {self.selected_mode.capitalize()}")
         self.analyze_button.setText({
             "text": "Analyze Text",
-            "url": "Analyze URL",
             "image": "Analyze Image",
             "video": "Analyze Video",
         }[self.selected_mode])
@@ -337,11 +315,6 @@ class MainWindow(QMainWindow):
                 if not content:
                     raise ValueError("Paste some text first.")
                 self.worker = ApiWorker("text", payload={"content": content})
-            elif self.selected_mode == "url":
-                content = self.url_input.text().strip()
-                if not content:
-                    raise ValueError("Enter a URL first.")
-                self.worker = ApiWorker("url", payload={"content": content})
             elif self.selected_mode == "image":
                 if not self.selected_image:
                     raise ValueError("Choose an image file first.")
